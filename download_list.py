@@ -3,36 +3,14 @@ import time
 
 import os
 
-queues = {
-    "sthlm": "Bostadskön"
-}  # todo: fetch other queues
-building_types = {
-    "nyproduktion": "Endast nyproduktion",
-    "ej_nyproduktion": "Utan nyproduktion"
-}
-years = range(2000, 2019)
-groups = [
-  "0-2",
-  "2-4",
-  "4-6",
-  "6-8",
-  "8-10",
-  "10-12",
-  "12-14",
-  "14-16",
-  "16-18",
-  "18-20",
-  "20 <",
-]
+from utils import BUILDING_TYPES, QUEUES, get_raw_list_file_path, YEARS, QUEUE_TIME_GROUPS
 
-
-def _data_file_path(queue, year, building_type, group):
-    return 'data/%s/%s/%s/%s.html' % (queue, year, building_type, group)
 
 def _ensure_dir(file_path):
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
+
 
 def fetch(queue, year, building_type, group):
     response = requests.post(
@@ -41,8 +19,8 @@ def fetch(queue, year, building_type, group):
             "rooms": "",
             "area": "",
             "apartmentType": "Alla",
-            "buildingType": building_types[building_type],
-            "queue": queues[queue],
+            "buildingType": BUILDING_TYPES[building_type],
+            "queue": QUEUES[queue],
             "year": str(year),
             "group": group
         },
@@ -51,7 +29,7 @@ def fetch(queue, year, building_type, group):
 
     # Throw an error for bad status codes
     response.raise_for_status()
-    file_path = _data_file_path(queue, year, building_type, group)
+    file_path = get_raw_list_file_path(queue, year, building_type, group)
     print(file_path)
     _ensure_dir(file_path)
     with open(file_path, 'wb+') as handle:
@@ -60,10 +38,10 @@ def fetch(queue, year, building_type, group):
 
 
 if __name__ == "__main__":
-    for queue in queues.keys():
-        for year in years:
-            for building_type in building_types.keys():
-                for group in groups:
+    for queue in QUEUES.keys():
+        for year in YEARS:
+            for building_type in BUILDING_TYPES.keys():
+                for group in QUEUE_TIME_GROUPS:
                     fetch(queue, year, building_type, group)
                     time.sleep(0.2)
 
