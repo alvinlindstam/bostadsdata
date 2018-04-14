@@ -10,6 +10,21 @@ from datetime import date
 
 from utils import write_prettier_json
 
+
+SHORTER_KEYS = {
+    "Annons publicerad": "pub_d",
+    "Anmälan senast": "ad_d",
+    "fetch_date": "fd",
+    "Inflyttning": "move_d",
+    "Gatuadress": "addr",
+    "Antal rum": "rooms",
+    "Yta": "area",
+    "Hyra": "rent",
+    "Våning": "floor",
+    "Lägenhetsnummer": "ap_no",
+}
+
+
 def sanitize_whitespace(text):
     return re.sub(r'\s+', ' ', text.strip())
 
@@ -33,6 +48,7 @@ def parse(html):
         for prop in box.find_all('div', class_="egenskap"):
             key = sanitize_whitespace(prop.find('div', class_="n").text)
             key = key.rstrip(':')
+            key = SHORTER_KEYS.get(key, key)
             value = sanitize_whitespace(prop.find('div', class_="v").text)
             props[key] = value
 
@@ -42,7 +58,7 @@ def parse(html):
 
     landlord_link = soup.find('a', title="Hyresvärdens webbplats")
     if landlord_link:
-        props['landlord_link'] = str(landlord_link.attrs['href'])
+        props['ll'] = str(landlord_link.attrs['href'])
     return props
 
 
@@ -53,17 +69,19 @@ if __name__ == "__main__":
 
     with open("data/extra_ad_data.json", "r") as old_extra_data:
         extra_data = json.loads(old_extra_data.read())
-        existing_aids = extra_data.keys()
+        existing_aids = set(int(aid) for aid in extra_data.keys())
 
     aids_to_fetch = aids - existing_aids
+    counter = 0
 
     try:
         for aid in sorted(aids_to_fetch, reverse=True):
             response = requests.get("https://bostad.stockholm.se/Lista/details/?aid=%s" % aid)
             props = parse(response.content)
-            props['data_date'] = date.today().isoformat()
-            print(aid, props)
+            props[SHORTER_KEYS['fetch_date']] = date.today().isoformat()
             extra_data[str(aid)] = props
+            print(aid, counter, round(counter/len(aids_to_fetch), 3))
+            counter += 1
             time.sleep(1)
     finally:
         with open("data/extra_ad_data.json", "w+") as extra_data_file:
