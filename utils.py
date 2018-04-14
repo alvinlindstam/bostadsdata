@@ -42,5 +42,5 @@ def write_prettier_json(data, file):
         file.write("  ")
         file.write("  " + json.dumps(item, ensure_ascii=False))
         if isdict:
-            file.write(": " + json.dumps(data[item]))
+            file.write(": " + json.dumps(data[item], ensure_ascii=False))
     file.write("\n" + ("}" if isdict else "]") + "\n")
