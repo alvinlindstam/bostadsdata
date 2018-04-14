@@ -75,14 +75,16 @@ if __name__ == "__main__":
     counter = 0
 
     try:
+        session = requests.Session()
         for aid in sorted(aids_to_fetch, reverse=True):
-            response = requests.get("https://bostad.stockholm.se/Lista/details/?aid=%s" % aid)
+            response = session.get("https://bostad.stockholm.se/Lista/details/?aid=%s" % aid)
+            assert response.status_code == 200
             props = parse(response.content)
             props[SHORTER_KEYS['fetch_date']] = date.today().isoformat()
             extra_data[str(aid)] = props
             print(aid, counter, round(counter/len(aids_to_fetch), 3))
             counter += 1
-            time.sleep(1)
+            time.sleep(0.05)
     finally:
         with open("data/extra_ad_data.json", "w+") as extra_data_file:
             write_prettier_json(extra_data, file=extra_data_file)
