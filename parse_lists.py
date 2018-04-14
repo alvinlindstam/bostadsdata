@@ -4,7 +4,7 @@ import re
 from bs4 import BeautifulSoup
 
 from utils import (BUILDING_TYPES, QUEUE_TIME_GROUPS, QUEUES, YEARS,
-                   get_raw_list_file_path)
+                   get_raw_list_file_path, write_prettier_json)
 
 MONTHS = [None, 'jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
 
@@ -55,13 +55,5 @@ if __name__ == "__main__":
         aid, *rest = row
         return aid is None, aid, rest
     all_values.sort(key=key)
-    first_line = True
     with open("data/full_list.json", "w+") as full_list:
-        full_list.write("[\n")
-        for v in all_values:
-            if first_line:
-                first_line = False
-            else:
-                full_list.write(",\n")
-            full_list.write("  " + json.dumps(v, ensure_ascii=False))
-        full_list.write("]\n")
+        write_prettier_json(all_values, file=full_list)
