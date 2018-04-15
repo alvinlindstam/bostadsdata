@@ -81,11 +81,13 @@ if __name__ == "__main__":
                 session.close()
                 session = requests.Session()
             response = session.get("https://bostad.stockholm.se/Lista/details/?aid=%s" % aid)
-            assert response.status_code == 200
-            props = parse(response.content)
-            props[SHORTER_KEYS['fetch_date']] = date.today().isoformat()
-            extra_data[str(aid)] = props
-            print(aid, counter, round(counter/len(aids_to_fetch), 3))
+            if response.status_code == 200:
+                props = parse(response.content)
+                props[SHORTER_KEYS['fetch_date']] = date.today().isoformat()
+                extra_data[str(aid)] = props
+                print(aid, counter, round(counter/len(aids_to_fetch), 3))
+            else:
+                print(aid, "error", response.status_code)
             counter += 1
             time.sleep(0.05)
     finally:
