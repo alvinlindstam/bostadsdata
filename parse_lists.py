@@ -23,6 +23,16 @@ def parse_coordinates(soup):
     return None, None
 
 
+def to_number(string):
+    try:
+        return int(string)
+    except ValueError:
+        try:
+            return float(string)
+        except ValueError:
+            return string
+
+
 def parse(html, building_type):
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -33,6 +43,11 @@ def parse(html, building_type):
         row_values = [sanitize_whitespace(td.text) for td in tds]
         if row_values != ['Inga bostäder har förmedlats för kön under valt år']:
             [municipality, part_of_town, address, rooms, area, rent, floor, queued_since, type_, _link] = row_values
+            rooms = to_number(rooms)
+            area = to_number(area)
+            rent = to_number(rent)
+            rent = to_number(rent)
+            floor = to_number(floor)
             link_href = tds[2].find('a').attrs["href"]
             aid_str = link_href.replace("/Lista/details/?aid=", "")
             aid = None if aid_str == '' else int(aid_str)
@@ -53,7 +68,7 @@ if __name__ == "__main__":
 
     def key(row):
         aid, *rest = row
-        return aid is None, aid, rest
+        return aid is None, aid, rest[:3]
     all_values.sort(key=key)
     with open("data/full_list.json", "w+") as full_list:
         write_prettier_json(all_values, file=full_list)
