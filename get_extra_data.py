@@ -77,6 +77,9 @@ if __name__ == "__main__":
     try:
         session = requests.Session()
         for aid in sorted(aids_to_fetch, reverse=True):
+            if counter % 100 == 0:
+                session.close()
+                session = requests.Session()
             response = session.get("https://bostad.stockholm.se/Lista/details/?aid=%s" % aid)
             assert response.status_code == 200
             props = parse(response.content)
