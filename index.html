@@ -323,13 +323,13 @@
         .margins({top: 10, right: 50, bottom: 30, left: 45})
         .dimension(queueTimeDimension)
         .group(queueTimeGroup)
+        .elasticX(true)
         .elasticY(true)
         .centerBar(true)
         .gap(1)
         .round(dc.round.floor)
         .alwaysUseRounding(true)
         .x(d3.scale.linear().domain([0, 100000]))
-        .elasticX(true)
         .renderHorizontalGridLines(true);
       queueTimeChart.yAxis().ticks(5);
 
@@ -339,13 +339,13 @@
         .margins({top: 10, right: 50, bottom: 30, left: 45})
         .dimension(rentDimension)
         .group(rentGroup)
+        .elasticX(true)
         .elasticY(true)
         .centerBar(true)
         .gap(1)
         .round(dc.round.floor)
         .alwaysUseRounding(true)
         .x(d3.scale.linear().domain([0, 100000]))
-        .elasticX(true)
         .renderHorizontalGridLines(true);
       rentChart.yAxis().ticks(5);
 
@@ -360,6 +360,7 @@
         .x(d3.time.scale().domain(monthDomain))
         .round(d3.time.month.round)
         .xUnits(d3.time.months)
+        .elasticX(true)
         .elasticY(true)
         .renderHorizontalGridLines(true)
         .legend(dc.legend().x(800).y(10).itemHeight(13).gap(5))
@@ -385,6 +386,7 @@
         .x(d3.time.scale().domain(monthDomain))
         .round(d3.time.month.round)
         .alwaysUseRounding(true)
+        .elasticX(true)
         .elasticY(true)
         .xUnits(d3.time.months);
       volumeChart.yAxis().ticks(3);
