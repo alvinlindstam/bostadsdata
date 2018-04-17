@@ -126,6 +126,18 @@
     </div>
 
     <div class="row">
+        <div id="queue-date-chart">
+            <h3 class="graph-title">Ködatum vid förmedling</h3>
+            <span class="reset" style="display: none;">range: <span class="filter"></span></span>
+            <a class="reset" href="javascript:queueDateChart.filterAll();queueDateChart.filterAll();dc.redrawAll();"
+               style="display: none;">reset</a>
+
+            <div class="clearfix"></div>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+
+    <div class="row">
         <div>
             <div class="dc-data-count">
                 <span class="filter-count"></span> selected out of <span class="total-count"></span> records | <a
@@ -153,6 +165,7 @@
     var landlordSelect = dc.selectMenu('#landlord-select');
     var monthyQueueChart = dc.lineChart('#monthly-queue-chart');
     var volumeChart = dc.barChart('#monthly-volume-chart');
+    var queueDateChart = dc.barChart('#queue-date-chart');
     var dataCount = dc.dataCount('.dc-data-count');
     var dataTable = dc.dataTable('.dc-data-table');
     var areaSelect = dc.selectMenu("#area-select")
@@ -254,6 +267,9 @@
       }
       var landlordDimension = ndx.dimension(function(d) {return d.landlord ? normalizeLandLord(d.landlord) : "Okänd"});
       var landlordGroup = landlordDimension.group();
+
+      var queueDateDimension = ndx.dimension(function(d) {return d3.time.month(d.queue_date)});
+      var queueDateGroup = queueDateDimension.group();
 
       var monthDomain = [new Date(1999, 0, 1), new Date()];
 
@@ -374,7 +390,8 @@
           return dateFormat(d.key) + '\n' + numberFormat(value);
         });
 
-      volumeChart.width(990)
+      volumeChart
+        .width(990)
         .height(80)
         .margins({top: 0, right: 50, bottom: 20, left: 45})
         .dimension(monthDimension)
@@ -389,6 +406,22 @@
         .elasticY(true)
         .xUnits(d3.time.months);
       volumeChart.yAxis().ticks(3);
+
+
+      queueDateChart
+        .width(990)
+        .height(80)
+        .margins({top: 0, right: 50, bottom: 20, left: 45})
+        .dimension(queueDateDimension)
+        .group(queueDateGroup)
+        .centerBar(true)
+        .gap(1)
+        .x(d3.time.scale().domain(monthDomain))
+        .round(d3.time.month.round)
+        .alwaysUseRounding(true)
+        .elasticY(true)
+        .xUnits(d3.time.months);
+      queueDateChart.yAxis().ticks(3);
 
       dataCount
         .dimension(ndx)
