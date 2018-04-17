@@ -135,28 +135,19 @@
         var ndx = crossfilter(data);
         var all = ndx.groupAll();
 
-        var dateDimension = ndx.dimension(function (d) {
-            return d.last_ad_date;
-        });
+        var monthDimension = ndx.dimension(function (d) {return d.month;});
+        var monthQueueDaysGroup = reductio().avg(function(d) { return d.queue_days; })(monthDimension.group());
 
-        var moveMonths = ndx.dimension(function (d) {
-          return d.month;
-        });
+        var municipalityDimension = ndx.dimension(function (d) {return d.municipality});
+        var municipalityGroup = municipalityDimension.group();
 
-        var monthQueueDaysGroup = reductio().avg(function(d) { return d.queue_days; })(moveMonths.group());
+        var newBuildingDimension = ndx.dimension(function (d) {return d.is_new});
+        var newBuildingGroup = newBuildingDimension.group();
 
-        var municipality = ndx.dimension(function (d) {return d.municipality});
-        var municipalityGroup = municipality.group();
+        var queueTimeDimension = ndx.dimension(function (d) {return d.queue_days - (d.queue_days % 30)});
+        var queueTimeGroup = queueTimeDimension.group();
 
-        var newBuilding = ndx.dimension(function (d) {return d.is_new});
-        var newBuildingGroup = newBuilding.group();
-
-        var queueTime = ndx.dimension(function (d) {
-          return d.queue_days - (d.queue_days % 30)
-        });
-        var queueTimeGroup = queueTime.group();
-
-        var dateDomain = [new Date(1999, 0, 1), new Date()];
+        var monthDomain = [new Date(1999, 0, 1), new Date()];
 
         municipalityChart
           .width(PIE_CHART_SIZE)
@@ -164,7 +155,7 @@
           .radius(PIE_RADIUS)
           .innerRadius(PIE_RADIUS/3)
           .group(municipalityGroup)
-          .dimension(municipality)
+          .dimension(municipalityDimension)
           .label(function (d) {
               return d.key;
           });
@@ -174,7 +165,7 @@
           .height(PIE_CHART_SIZE)
           .radius(PIE_RADIUS)
           .innerRadius(PIE_RADIUS/3)
-          .dimension(newBuilding)
+          .dimension(newBuildingDimension)
           .group(newBuildingGroup)
           .label(function (d) {
             return d.key ? "Nyproduktion" : "Ej nyproduktion";
@@ -184,7 +175,7 @@
           .width(900)
           .height(180)
           .margins({top: 10, right: 50, bottom: 30, left: 40})
-          .dimension(queueTime)
+          .dimension(queueTimeDimension)
           .group(queueTimeGroup)
           .elasticY(true)
           .centerBar(true)
@@ -201,10 +192,10 @@
           .width(990)
           .height(200)
           .margins({top: 30, right: 50, bottom: 25, left: 40})
-          .dimension(moveMonths)
+          .dimension(monthDimension)
           .mouseZoomable(true)
           .rangeChart(volumeChart)
-          .x(d3.time.scale().domain(dateDomain))
+          .x(d3.time.scale().domain(monthDomain))
           .round(d3.time.month.round)
           .xUnits(d3.time.months)
           .elasticY(true)
@@ -224,12 +215,12 @@
         volumeChart.width(990)
           .height(80)
           .margins({top: 0, right: 50, bottom: 20, left: 40})
-          .dimension(moveMonths)
+          .dimension(monthDimension)
           .group(monthQueueDaysGroup)
           .valueAccessor(function (d) {return d.value.count;})
           .centerBar(true)
           .gap(1)
-          .x(d3.time.scale().domain(dateDomain))
+          .x(d3.time.scale().domain(monthDomain))
           .round(d3.time.month.round)
           .alwaysUseRounding(true)
           .elasticY(true)
@@ -246,7 +237,7 @@
           });
 
         dataTable
-          .dimension(dateDimension)
+          .dimension(monthDimension)
           .group(function (d) {return d.last_ad_date.getFullYear();})
           .size(20)
           .columns([
