@@ -15,12 +15,23 @@
       .dc-table-group {
         display: none;
       }
-      body, input, textarea, select, button {
+      body, input, textarea, select, button, .dc-chart .axis text {
         font-size: 14px;
+        font-family: sans-serif;
+      }
+
+      h1 {
+        font-size: 1.5em
+      }
+      h2 {
+        font-size: 1.3em
       }
       .dc-select-menu {
         width: 200px;
         margin: 0 10px;
+      }
+      td {
+        padding: 0.2em;
       }
     </style>
 </head>
@@ -282,7 +293,7 @@
       queueTimeChart
         .width(490)
         .height(180)
-        .margins({top: 10, right: 50, bottom: 30, left: 40})
+        .margins({top: 10, right: 50, bottom: 30, left: 45})
         .dimension(queueTimeDimension)
         .group(queueTimeGroup)
         .elasticY(true)
@@ -298,7 +309,7 @@
       rentChart
         .width(490)
         .height(180)
-        .margins({top: 10, right: 50, bottom: 30, left: 40})
+        .margins({top: 10, right: 50, bottom: 30, left: 45})
         .dimension(rentDimension)
         .group(rentGroup)
         .elasticY(true)
@@ -315,7 +326,7 @@
         .renderArea(true)
         .width(990)
         .height(200)
-        .margins({top: 30, right: 50, bottom: 25, left: 40})
+        .margins({top: 30, right: 50, bottom: 25, left: 45})
         .dimension(monthDimension)
         .mouseZoomable(true)
         .rangeChart(volumeChart)
@@ -338,7 +349,7 @@
 
       volumeChart.width(990)
         .height(80)
-        .margins({top: 0, right: 50, bottom: 20, left: 40})
+        .margins({top: 0, right: 50, bottom: 20, left: 45})
         .dimension(monthDimension)
         .group(monthQueueDaysGroup)
         .valueAccessor(function (d) {return d.value.count;})
@@ -349,7 +360,7 @@
         .alwaysUseRounding(true)
         .elasticY(true)
         .xUnits(d3.time.months);
-      volumeChart.yAxis().ticks(4);
+      volumeChart.yAxis().ticks(3);
 
       dataCount
         .dimension(ndx)
