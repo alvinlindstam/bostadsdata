@@ -43,21 +43,21 @@
 
     <div class="row">
         <div id="new-building-chart">
-            <strong>Nyproduktion?</strong>
+            <h3>Nyproduktion?</h3>
             <a class="reset" href="javascript:newBuildingChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
         </div>
 
         <div id="rooms-chart">
-            <strong>Rum</strong>
+            <h3>Rum</h3>
             <a class="reset" href="javascript:roomsChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
         </div>
 
         <div id="type-select">
-            <strong>Typ</strong>
+            <h3>Typ</h3>
             <a class="reset" href="javascript:typeSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
@@ -65,14 +65,14 @@
 
         <div style="float:left;">
           <div id="area-select" style="float:none">
-            <strong>Kommun</strong>
+            <h3>Kommun</h3>
             <a class="reset" href="javascript:areaSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
           </div>
 
           <div id="sub-area-select" style="float:none">
-            <strong>Kommundel</strong>
+            <h3>Kommundel</h3>
             <a class="reset" href="javascript:subAreaSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
@@ -85,7 +85,7 @@
 
     <div class="row">
         <div id="queue-time-chart">
-            <strong>Kötid</strong>
+            <h3>Kötid</h3>
             <span class="reset" style="display: none;">range: <span class="filter"></span></span>
             <a class="reset" href="javascript:queueTimeChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
@@ -93,7 +93,7 @@
         </div>
 
         <div id="rent-chart">
-            <strong>Hyra</strong>
+            <h3>Hyra</h3>
             <span class="reset" style="display: none;">range: <span class="filter"></span></span>
             <a class="reset" href="javascript:rentChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
@@ -104,7 +104,7 @@
 
     <div class="row">
         <div id="monthly-queue-chart">
-            <strong>Kötid per månad</strong>
+            <h3>Kötid per månad</h3>
             <span class="reset" style="display: none;">range: <span class="filter"></span></span>
             <a class="reset" href="javascript:monthyQueueChart.filterAll();volumeChart.filterAll();dc.redrawAll();"
                style="display: none;">reset</a>
@@ -129,6 +129,8 @@
             </div>
             <div class="clearfix"></div>
         </div>
+
+        <h3>Senaste matchande förmedlingar</h3>
         <table class="table table-hover dc-data-table">
         </table>
     </div>
@@ -366,7 +368,7 @@
         .dimension(ndx)
         .group(all)
         .html({
-          some: '<strong>%filter-count</strong> selected out of <strong>%total-count</strong> records' +
+          some: '<h3>%filter-count</h3> selected out of <h3>%total-count</h3> records' +
               ' | <a href=\'javascript:dc.filterAll(); dc.renderAll();\'>Reset All</a>',
           all: 'All records selected. Please click on the graph to apply filters.'
         });
@@ -379,12 +381,14 @@
             {label: "Länk", format: function(d){
               return '<a href="https://bostad.stockholm.se/Lista/Details/?aid=' + d.id + '">' + (d.address || "Länk") + '</a>'
             }},
-            {label: 'Kommun', format: function (d) {return d.municipality;}},
             {label: "Anmälan senast", format: function(d) {return dateFormat(d.last_ad_date)}},
             {label: "Ködagar", format: function(d) {return d.queue_days}},
             {label: 'Rum', format: function (d) {return d.rooms;}},
             {label: 'Hyra', format: function (d) {return d.rent;}},
             {label: 'Typ', format: function (d) {return d.type;}},
+            {label: 'Kommun', format: function (d) {return d.municipality;}},
+            {label: 'Område', format: function (d) {return d.municipal_area;}},
+            {label: 'Hyresvärd', format: function (d) {return d.landlord;}},
         ])
         .sortBy(function (d) {
             return d.last_ad_date;
