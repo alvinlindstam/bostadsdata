@@ -19,7 +19,8 @@
         font-size: 14px;
       }
       .dc-select-menu {
-        width: 220px;
+        width: 200px;
+        margin: 0 10px;
       }
     </style>
 </head>
@@ -44,9 +45,9 @@
             <div class="clearfix"></div>
         </div>
 
-        <div id="type-chart">
+        <div id="type-select">
             <strong>Typ</strong>
-            <a class="reset" href="javascript:typeChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+            <a class="reset" href="javascript:typeSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
         </div>
@@ -130,7 +131,7 @@
     var queueTimeChart = dc.barChart('#queue-time-chart');
     var rentChart = dc.barChart('#rent-chart');
     var roomsChart = dc.pieChart('#rooms-chart');
-    var typeChart = dc.rowChart('#type-chart');
+    var typeSelect = dc.selectMenu('#type-select');
     var monthyQueueChart = dc.lineChart('#monthly-queue-chart');
     var volumeChart = dc.barChart('#monthly-volume-chart');
     var dataCount = dc.dataCount('.dc-data-count');
@@ -147,6 +148,7 @@
     d3.json('data/full_data.json', function (loaded_data) {
       var dateFormat = d3.time.format('%Y-%m-%d');
       var numberFormat = d3.format('.2f');
+      var orderByKey = function(a, b) {return a.key > b.key ? 1 : b.key > a.key ? -1 : 0};
 
       var data = loaded_data.map(function (d) {
         var obj =  {
@@ -247,18 +249,13 @@
             return d.key;
         });
 
-      typeChart
+      typeSelect
         .dimension(typeDimension)
         .group(typeGroup)
-        .width(PIE_CHART_SIZE)
-        .height(PIE_CHART_SIZE * 1.5)
-        .margins({top: 20, left: 10, right: 10, bottom: 20})
-        .valueAccessor(function (d) {return d.value.avg;})
-      .title(function (d) {
-          return d.key + ": " + Math.round(d.value.avg);
-      })
-      .elasticX(true)
-      .xAxis().ticks(4);
+        .valueAccessor(function (d) {return d.value.count;})
+        .multiple(true)
+        .numberVisible(10)
+        .order(function(a, b) {return a.value.count > b.value.count ? -1 : b.value.count > a.value.count ? 1 : 0});
 
       areaSelect
         .dimension(municipalityDimension)
@@ -272,7 +269,7 @@
             return -1
           if (b.key == "Stockholm")
             return 1
-          return a.key > b.key ? 1 : b.key > a.key ? -1 : 0;
+          return orderByKey(a, b);
         });
 
       subAreaSelect
