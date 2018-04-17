@@ -15,6 +15,12 @@
       .dc-table-group {
         display: none;
       }
+      body, input, textarea, select, button {
+        font-size: 14px;
+      }
+      .dc-select-menu {
+        width: 220px;
+      }
     </style>
 </head>
 <body>
@@ -38,19 +44,30 @@
             <div class="clearfix"></div>
         </div>
 
-        <div id="municipality-chart">
-            <strong>Kommun</strong>
-            <a class="reset" href="javascript:municipalityChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
-
-            <div class="clearfix"></div>
-        </div>
-
         <div id="type-chart">
             <strong>Typ</strong>
             <a class="reset" href="javascript:typeChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
         </div>
+
+        <div style="float:left;">
+          <div id="area-select" style="float:none">
+            <strong>Kommun</strong>
+            <a class="reset" href="javascript:areaSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+            <div class="clearfix"></div>
+          </div>
+
+          <div id="sub-area-select" style="float:none">
+            <strong>Kommundel</strong>
+            <a class="reset" href="javascript:subAreaSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+            <div class="clearfix"></div>
+          </div>
+          <div class="clearfix"></div>
+        </div>
+
         <div class="clearfix"></div>
     </div>
 
@@ -112,13 +129,14 @@
     var newBuildingChart = dc.pieChart('#new-building-chart');
     var queueTimeChart = dc.barChart('#queue-time-chart');
     var rentChart = dc.barChart('#rent-chart');
-    var municipalityChart = dc.rowChart('#municipality-chart');
     var roomsChart = dc.pieChart('#rooms-chart');
     var typeChart = dc.rowChart('#type-chart');
     var monthyQueueChart = dc.lineChart('#monthly-queue-chart');
     var volumeChart = dc.barChart('#monthly-volume-chart');
     var dataCount = dc.dataCount('.dc-data-count');
     var dataTable = dc.dataTable('.dc-data-table');
+    var areaSelect = dc.selectMenu("#area-select")
+    var subAreaSelect = dc.selectMenu("#sub-area-select")
 
     var PIE_RADIUS = 100
     var PIE_CHART_SIZE = PIE_RADIUS * 2 + 20
@@ -129,26 +147,7 @@
     d3.json('data/full_data.json', function (loaded_data) {
       var dateFormat = d3.time.format('%Y-%m-%d');
       var numberFormat = d3.format('.2f');
-      var municipalityGroups = [
-        ["Stockholm"],
-        ["Huddinge"],
-        ["Nacka", "Värmdö"], // öst
-        ["Botkyrka", "Salem"],
-        ["Järfälla", "Sollentuna", "Sigtuna", "Upplands väsby", "Upplands-bro", "Ekerö"],  // nordväst
-        ["Solna", "Sundbyberg"],
-        ["Haninge", "Tyresö", "Nynäshamn"], // sydöst
-        ["Lidingö"],
-        ["Uppsala", "Knivsta", "Norrtälje"],
-        ["Södertälje", "Nykvarn"],
-        ["Danderyd", "Täby", "Vaxholm", "Vallentuna", "Österåker"] // nordöst
-      ]
-      var municipalityGroupByMunicipality = {}
-      municipalityGroups.forEach(function(array) {
-        var key = array.join("/")
-        array.forEach(function(municipality) {
-          municipalityGroupByMunicipality[municipality] = key
-        })
-      })
+
       var data = loaded_data.map(function (d) {
         var obj =  {
           id: d[0],
@@ -189,11 +188,11 @@
       var monthDimension = ndx.dimension(function (d) {return d.month;});
       var monthQueueDaysGroup = avgQueueTimeReducer(monthDimension.group());
 
-      var municipalityDimension = ndx.dimension(function (d) {return municipalityGroupByMunicipality[d.municipality]});
+      var municipalityDimension = ndx.dimension(function (d) {return d.municipality});
       var municipalityGroup = avgQueueTimeReducer(municipalityDimension.group());
 
-      var subAreaDimension = ndx.dimension(function (d) {return d.municipality + " " + d.municipal_area})
-      var subAreaGroup = subArea
+      var subAreaDimension = ndx.dimension(function (d) {return d.municipal_area})
+      var subAreaGroup = subAreaDimension.group();
 
       var newBuildingDimension = ndx.dimension(function (d) {return d.is_new});
       var newBuildingGroup = newBuildingDimension.group();
@@ -235,19 +234,6 @@
           return d.key ? "Nyproduktion" : "Ej nyproduktion";
         })
 
-      municipalityChart
-        .dimension(municipalityDimension)
-        .group(municipalityGroup)
-        .width(PIE_CHART_SIZE)
-        .height(PIE_CHART_SIZE * 1.5)
-        .margins({top: 20, left: 10, right: 10, bottom: 20})
-        .valueAccessor(function (d) {return d.value.avg;})
-        .title(function (d) {
-            return d.key + ": " + Math.round(d.value.avg);
-        })
-        .elasticX(true)
-        .xAxis().ticks(4);
-
       roomsChart
         .width(PIE_CHART_SIZE)
         .height(PIE_CHART_SIZE)
@@ -273,6 +259,28 @@
       })
       .elasticX(true)
       .xAxis().ticks(4);
+
+      areaSelect
+        .dimension(municipalityDimension)
+        .group(municipalityGroup)
+        .multiple(true)
+        .width(PIE_CHART_SIZE)
+        .valueAccessor(function (d) {return d.value.count;})
+        .numberVisible(4)
+        .order(function (a,b) {
+          if (a.key == "Stockholm")
+            return -1
+          if (b.key == "Stockholm")
+            return 1
+          return a.key > b.key ? 1 : b.key > a.key ? -1 : 0;
+        });
+
+      subAreaSelect
+        .dimension(subAreaDimension)
+        .group(subAreaGroup)
+        .multiple(true)
+        .numberVisible(8);
+
 
       queueTimeChart
         .width(490)
