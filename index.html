@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Kötider Stockholms Bostadskö</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/dc/2.1.10/dc.css"/>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crossfilter2/1.4.5/crossfilter.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/dc/2.1.10/dc.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/reductio/0.6.3/reductio.js"></script>
+    <style>
+      .clearfix {
+        clear: both;
+      }
+      .dc-table-group {
+        display: none;
+      }
+    </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <h2>Kötider</h2>
+
+    <div class="row">
+        <div id="new-building-chart">
+            <strong>Nyproduktion?</strong>
+            <a class="reset" href="javascript:newBuildingChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+            <div class="clearfix"></div>
+        </div>
+
+        <div id="municipality-chart">
+            <strong>Kommun</strong>
+            <a class="reset" href="javascript:municipalityChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+            <div class="clearfix"></div>
+        </div>
+
+        <div id="queue-time-chart">
+            <strong>Kötid</strong>
+            <span class="reset" style="display: none;">range: <span class="filter"></span></span>
+            <a class="reset" href="javascript:queueTimeChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+            <div class="clearfix"></div>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+
+    <div class="row">
+        <div id="monthly-queue-chart">
+            <strong>Kötid över tid</strong>
+            <span class="reset" style="display: none;">range: <span class="filter"></span></span>
+            <a class="reset" href="javascript:monthyQueueChart.filterAll();volumeChart.filterAll();dc.redrawAll();"
+               style="display: none;">reset</a>
+
+            <div class="clearfix"></div>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+
+    <div class="row">
+        <div id="monthly-volume-chart">
+        </div>
+        <div class="clearfix"></div>
+    </div>
+
+    <div class="row">
+        <div>
+            <div class="dc-data-count">
+                <span class="filter-count"></span> selected out of <span class="total-count"></span> records | <a
+                    href="javascript:dc.filterAll(); dc.renderAll();">Reset All</a>
+
+            </div>
+            <div class="clearfix"></div>
+        </div>
+        <table class="table table-hover dc-data-table">
+        </table>
+    </div>
+
+    <div class="clearfix"></div>
+  </div>
+  <script>
+    /* global dc,d3,crossfilter */
+
+    var newBuildingChart = dc.pieChart('#new-building-chart');
+    var queueTimeChart = dc.barChart('#queue-time-chart');
+    var municipalityChart = dc.pieChart('#municipality-chart');
+    var monthyQueueChart = dc.lineChart('#monthly-queue-chart');
+    var volumeChart = dc.barChart('#monthly-volume-chart');
+    var dataCount = dc.dataCount('.dc-data-count');
+    var dataTable = dc.dataTable('.dc-data-table');
+
+    var PIE_RADIUS = 100
+    var PIE_CHART_SIZE = PIE_RADIUS * 2 + 20
+
+    d3.json('data/full_data.json', function (loaded_data) {
+        var dateFormat = d3.time.format('%Y-%m-%d');
+        var numberFormat = d3.format('.2f');
+
+        var data = loaded_data.map(function (d) {
+            var obj =  {
+              id: d[0],
+              municipality: d[1],
+              municipal_area: d[2],
+              address: d[3],
+              rooms: d[4],
+              area: d[5],
+              rent: d[6],
+              floor: d[7],
+              queue_date: new Date(d[8]),
+              type: d[9],
+              is_new: d[10] === "nyproduktion",
+              ad_date: new Date(d[11]),
+              last_ad_date: new Date(d[12]),
+              move_date: new Date(d[13]),
+              landlord: d[14],
+              x: d[15],
+              y: d[16]
+            }
+
+            obj.month = d3.time.month(obj.last_ad_date);
+            obj.queue_days = Math.round((obj.last_ad_date - obj.queue_date) / (24 * 60 * 60 * 1000))
+            return obj
+        });
+        data = data.filter(function (d){
+          if (!d.last_ad_date || d.last_ad_date < new Date("1999-01-01")){
+            console.info("missing last_ad_date", d.id);
+            return false;
+          }
+          return true;
+        });
+
+        var ndx = crossfilter(data);
+        var all = ndx.groupAll();
+
+        var dateDimension = ndx.dimension(function (d) {
+            return d.last_ad_date;
+        });
+
+        var moveMonths = ndx.dimension(function (d) {
+          return d.month;
+        });
+
+        var monthQueueDaysGroup = reductio().avg(function(d) { return d.queue_days; })(moveMonths.group());
+
+        var municipality = ndx.dimension(function (d) {return d.municipality});
+        var municipalityGroup = municipality.group();
+
+        var newBuilding = ndx.dimension(function (d) {return d.is_new});
+        var newBuildingGroup = newBuilding.group();
+
+        var queueTime = ndx.dimension(function (d) {
+          return d.queue_days - (d.queue_days % 30)
+        });
+        var queueTimeGroup = queueTime.group();
+
+        var dateDomain = [new Date(1999, 0, 1), new Date()];
+
+        municipalityChart
+          .width(PIE_CHART_SIZE)
+          .height(PIE_CHART_SIZE)
+          .radius(PIE_RADIUS)
+          .innerRadius(PIE_RADIUS/3)
+          .group(municipalityGroup)
+          .dimension(municipality)
+          .label(function (d) {
+              return d.key;
+          });
+
+        newBuildingChart
+          .width(PIE_CHART_SIZE)
+          .height(PIE_CHART_SIZE)
+          .radius(PIE_RADIUS)
+          .innerRadius(PIE_RADIUS/3)
+          .dimension(newBuilding)
+          .group(newBuildingGroup)
+          .label(function (d) {
+            return d.key ? "Nyproduktion" : "Ej nyproduktion";
+          })
+
+        queueTimeChart
+          .width(900)
+          .height(180)
+          .margins({top: 10, right: 50, bottom: 30, left: 40})
+          .dimension(queueTime)
+          .group(queueTimeGroup)
+          .elasticY(true)
+          .centerBar(true)
+          .gap(1)
+          .round(dc.round.floor)
+          .alwaysUseRounding(true)
+          .x(d3.scale.linear().domain([0, 100000]))
+          .elasticX(true)
+          .renderHorizontalGridLines(true);
+        queueTimeChart.yAxis().ticks(5);
+
+        monthyQueueChart
+          .renderArea(true)
+          .width(990)
+          .height(200)
+          .margins({top: 30, right: 50, bottom: 25, left: 40})
+          .dimension(moveMonths)
+          .mouseZoomable(true)
+          .rangeChart(volumeChart)
+          .x(d3.time.scale().domain(dateDomain))
+          .round(d3.time.month.round)
+          .xUnits(d3.time.months)
+          .elasticY(true)
+          .renderHorizontalGridLines(true)
+          .legend(dc.legend().x(800).y(10).itemHeight(13).gap(5))
+          .brushOn(false)
+          .group(monthQueueDaysGroup, 'Genomsnittlig kötid')
+          .valueAccessor(function (d) {return d.value.avg;})
+          .title(function (d) {
+            var value = d.value.avg ? d.value.avg : d.value;
+            if (isNaN(value)) {
+                value = 0;
+            }
+            return dateFormat(d.key) + '\n' + numberFormat(value);
+          });
+
+        volumeChart.width(990)
+          .height(80)
+          .margins({top: 0, right: 50, bottom: 20, left: 40})
+          .dimension(moveMonths)
+          .group(monthQueueDaysGroup)
+          .valueAccessor(function (d) {return d.value.count;})
+          .centerBar(true)
+          .gap(1)
+          .x(d3.time.scale().domain(dateDomain))
+          .round(d3.time.month.round)
+          .alwaysUseRounding(true)
+          .elasticY(true)
+          .xUnits(d3.time.months);
+        volumeChart.yAxis().ticks(4);
+
+        dataCount
+          .dimension(ndx)
+          .group(all)
+          .html({
+            some: '<strong>%filter-count</strong> selected out of <strong>%total-count</strong> records' +
+                ' | <a href=\'javascript:dc.filterAll(); dc.renderAll();\'>Reset All</a>',
+            all: 'All records selected. Please click on the graph to apply filters.'
+          });
+
+        dataTable
+          .dimension(dateDimension)
+          .group(function (d) {return d.last_ad_date.getFullYear();})
+          .size(20)
+          .columns([
+              'id',
+              {label: "Datum (senast anmälan)", format: function(d) {return dateFormat(d.last_ad_date)}},
+              {label: "Ködagar", format: function(d) {return d.queue_days}},
+              {label: 'Kommun', format: function (d) {return d.municipality;}},
+          ])
+          .sortBy(function (d) {
+              return d.last_ad_date;
+          })
+          .order(d3.descending);
+
+        dc.renderAll();
+    });
+  </script>
+</body>
+</html>
