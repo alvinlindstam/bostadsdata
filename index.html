@@ -204,13 +204,14 @@
 
       var ndx = crossfilter(data);
       var all = ndx.groupAll();
-      var avgQueueTimeReducer = reductio().avg(function(d) { return d.queue_days; });
+      var getQueueDays = function(d) { return d.queue_days; }
+      var avgQueueTimeReducer = reductio().valueList(getQueueDays).median(true).avg(getQueueDays);
 
       var monthDimension = ndx.dimension(function (d) {return d.month;});
       var monthQueueDaysGroup = avgQueueTimeReducer(monthDimension.group());
 
       var municipalityDimension = ndx.dimension(function (d) {return d.municipality});
-      var municipalityGroup = avgQueueTimeReducer(municipalityDimension.group());
+      var municipalityGroup = municipalityDimension.group();
 
       var subAreaDimension = ndx.dimension(function (d) {return d.municipal_area})
       var subAreaGroup = subAreaDimension.group();
@@ -240,7 +241,7 @@
         }
         return type
       });
-      var typeGroup = avgQueueTimeReducer(typeDimension.group());
+      var typeGroup = typeDimension.group();
 
       var knownLandlordUrls = {}
       var normalizeLandLord = function(url){
@@ -283,7 +284,6 @@
       typeSelect
         .dimension(typeDimension)
         .group(typeGroup)
-        .valueAccessor(function (d) {return d.value.count;})
         .multiple(true)
         .numberVisible(6)
         .order(function(a, b) {return a.value.count > b.value.count ? -1 : b.value.count > a.value.count ? 1 : 0});
@@ -300,7 +300,6 @@
         .group(municipalityGroup)
         .multiple(true)
         .width(PIE_CHART_SIZE)
-        .valueAccessor(function (d) {return d.value.count;})
         .numberVisible(4)
         .order(function (a,b) {
           if (a.key == "Stockholm")
@@ -350,7 +349,7 @@
       rentChart.yAxis().ticks(5);
 
       monthyQueueChart
-        .renderArea(true)
+        .renderArea(false)
         .width(990)
         .height(200)
         .margins({top: 30, right: 50, bottom: 25, left: 45})
@@ -365,8 +364,8 @@
         .renderHorizontalGridLines(true)
         .legend(dc.legend().x(800).y(10).itemHeight(13).gap(5))
         .brushOn(false)
-        .group(monthQueueDaysGroup, 'Genomsnittlig kötid')
-        .valueAccessor(function (d) {return d.value.avg;})
+        .group(monthQueueDaysGroup, 'Genomsnittlig kötid', function (d) {return d.value.avg;})
+        .stack(monthQueueDaysGroup, 'Median kötid', function (d) {return (d.value.median || 0) - d.value.avg;})
         .title(function (d) {
           var value = d.value.avg ? d.value.avg : d.value;
           if (isNaN(value)) {
