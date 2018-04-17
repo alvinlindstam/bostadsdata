@@ -213,6 +213,7 @@
           .innerRadius(PIE_RADIUS/3)
           .group(roomsGroup)
           .dimension(roomsDimension)
+          .minAngleForLabel(0.2)
           .slicesCap(4)
           .label(function (d) {
               return d.key;
@@ -304,10 +305,15 @@
           .group(function (d) {return d.last_ad_date.getFullYear();})
           .size(20)
           .columns([
-              'id',
-              {label: "Datum (senast anmälan)", format: function(d) {return dateFormat(d.last_ad_date)}},
-              {label: "Ködagar", format: function(d) {return d.queue_days}},
+              {label: "Länk", format: function(d){
+                return '<a href="https://bostad.stockholm.se/Lista/Details/?aid=' + d.id + '">' + (d.address || "Länk") + '</a>'
+              }},
               {label: 'Kommun', format: function (d) {return d.municipality;}},
+              {label: "Anmälan senast", format: function(d) {return dateFormat(d.last_ad_date)}},
+              {label: "Ködagar", format: function(d) {return d.queue_days}},
+              {label: 'Rum', format: function (d) {return d.rooms;}},
+              {label: 'Hyra', format: function (d) {return d.rent;}},
+              {label: 'Typ', format: function (d) {return d.type;}},
           ])
           .sortBy(function (d) {
               return d.last_ad_date;
