@@ -179,7 +179,7 @@
         );
         var rentGroup = rentDimension.group();
 
-        var roomsDimension = ndx.dimension(function (d) {return d.rooms});
+        var roomsDimension = ndx.dimension(function (d) {return Math.floor(d.rooms)});
         var roomsGroup = roomsDimension.group();
 
         var monthDomain = [new Date(1999, 0, 1), new Date()];
@@ -213,6 +213,7 @@
           .innerRadius(PIE_RADIUS/3)
           .group(roomsGroup)
           .dimension(roomsDimension)
+          .slicesCap(4)
           .label(function (d) {
               return d.key;
           });
