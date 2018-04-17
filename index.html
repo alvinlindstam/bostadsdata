@@ -31,16 +31,16 @@
             <div class="clearfix"></div>
         </div>
 
-        <div id="municipality-chart">
-            <strong>Kommun</strong>
-            <a class="reset" href="javascript:municipalityChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+        <div id="rooms-chart">
+            <strong>Rum</strong>
+            <a class="reset" href="javascript:roomsChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
         </div>
 
-        <div id="rooms-chart">
-            <strong>Rum</strong>
-            <a class="reset" href="javascript:roomsChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+        <div id="municipality-chart">
+            <strong>Kommun</strong>
+            <a class="reset" href="javascript:municipalityChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
         </div>
@@ -112,7 +112,7 @@
     var newBuildingChart = dc.pieChart('#new-building-chart');
     var queueTimeChart = dc.barChart('#queue-time-chart');
     var rentChart = dc.barChart('#rent-chart');
-    var municipalityChart = dc.pieChart('#municipality-chart');
+    var municipalityChart = dc.rowChart('#municipality-chart');
     var roomsChart = dc.pieChart('#rooms-chart');
     var typeChart = dc.rowChart('#type-chart');
     var monthyQueueChart = dc.lineChart('#monthly-queue-chart');
@@ -129,7 +129,26 @@
     d3.json('data/full_data.json', function (loaded_data) {
         var dateFormat = d3.time.format('%Y-%m-%d');
         var numberFormat = d3.format('.2f');
-
+        var municipalityGroups = [
+          ["Stockholm"],
+          ["Huddinge"],
+          ["Nacka", "Värmdö"], // öst
+          ["Botkyrka", "Salem"],
+          ["Järfälla", "Sollentuna", "Sigtuna", "Upplands väsby", "Upplands-bro", "Ekerö"],  // nordväst
+          ["Solna", "Sundbyberg"],
+          ["Haninge", "Tyresö", "Nynäshamn"], // sydöst
+          ["Lidingö"],
+          ["Uppsala", "Knivsta", "Norrtälje"],
+          ["Södertälje", "Nykvarn"],
+          ["Danderyd", "Täby", "Vaxholm", "Vallentuna", "Österåker"] // nordöst
+        ]
+        var municipalityGroupByMunicipality = {}
+        municipalityGroups.forEach(function(array) {
+          var key = array.join("/")
+          array.forEach(function(municipality) {
+            municipalityGroupByMunicipality[municipality] = key
+          })
+        })
         var data = loaded_data.map(function (d) {
             var obj =  {
               id: d[0],
@@ -170,8 +189,8 @@
         var monthDimension = ndx.dimension(function (d) {return d.month;});
         var monthQueueDaysGroup = avgQueueTimeReducer(monthDimension.group());
 
-        var municipalityDimension = ndx.dimension(function (d) {return d.municipality});
-        var municipalityGroup = municipalityDimension.group();
+        var municipalityDimension = ndx.dimension(function (d) {return municipalityGroupByMunicipality[d.municipality]});
+        var municipalityGroup = avgQueueTimeReducer(municipalityDimension.group());
 
         var newBuildingDimension = ndx.dimension(function (d) {return d.is_new});
         var newBuildingGroup = newBuildingDimension.group();
@@ -214,15 +233,17 @@
           })
 
         municipalityChart
-          .width(PIE_CHART_SIZE)
-          .height(PIE_CHART_SIZE)
-          .radius(PIE_RADIUS)
-          .innerRadius(PIE_RADIUS/3)
-          .group(municipalityGroup)
           .dimension(municipalityDimension)
-          .label(function (d) {
-              return d.key;
-          });
+          .group(municipalityGroup)
+          .width(PIE_CHART_SIZE)
+          .height(PIE_CHART_SIZE * 1.5)
+          .margins({top: 20, left: 10, right: 10, bottom: 20})
+          .valueAccessor(function (d) {return d.value.avg;})
+          .title(function (d) {
+              return d.key + ": " + Math.round(d.value.avg);
+          })
+          .elasticX(true)
+          .xAxis().ticks(4);
 
         roomsChart
           .width(PIE_CHART_SIZE)
