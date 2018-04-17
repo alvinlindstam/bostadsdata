@@ -28,10 +28,14 @@
       }
       .dc-select-menu {
         width: 200px;
-        margin: 0 10px;
+        margin: 0.2em 1em;
+        display: block;
       }
       td {
         padding: 0.2em;
+      }
+      .graph-title {
+        display: inline;
       }
     </style>
 </head>
@@ -43,39 +47,40 @@
 
     <div class="row">
         <div id="new-building-chart">
-            <h3>Nyproduktion?</h3>
+            <h3 class="graph-title">Nyproduktion?</h3>
             <a class="reset" href="javascript:newBuildingChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
         </div>
 
         <div id="rooms-chart">
-            <h3>Rum</h3>
+            <h3 class="graph-title">Rum</h3>
             <a class="reset" href="javascript:roomsChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
             <div class="clearfix"></div>
         </div>
+        <div style="float:left;">
+          <div id="type-select" style="float:none">
+              <h3 class="graph-title">Typ</h3>
+              <a class="reset" href="javascript:typeSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
-        <div id="type-select">
-            <h3>Typ</h3>
-            <a class="reset" href="javascript:typeSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+          </div>
 
-            <div class="clearfix"></div>
+          <div id="landlord-select" style="float:none">
+              <h3 class="graph-title">Hyresvärd</h3>
+              <a class="reset" href="javascript:landlordSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+          </div>
+          <div class="clearfix"></div>
         </div>
-
         <div style="float:left;">
           <div id="area-select" style="float:none">
-            <h3>Kommun</h3>
+            <h3 class="graph-title">Kommun</h3>
             <a class="reset" href="javascript:areaSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
-
-            <div class="clearfix"></div>
           </div>
 
           <div id="sub-area-select" style="float:none">
-            <h3>Kommundel</h3>
+            <h3 class="graph-title">Kommundel</h3>
             <a class="reset" href="javascript:subAreaSelect.filterAll();dc.redrawAll();" style="display: none;">reset</a>
-
-            <div class="clearfix"></div>
           </div>
           <div class="clearfix"></div>
         </div>
@@ -85,7 +90,7 @@
 
     <div class="row">
         <div id="queue-time-chart">
-            <h3>Kötid</h3>
+            <h3 class="graph-title">Kötid</h3>
             <span class="reset" style="display: none;">range: <span class="filter"></span></span>
             <a class="reset" href="javascript:queueTimeChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
@@ -93,7 +98,7 @@
         </div>
 
         <div id="rent-chart">
-            <h3>Hyra</h3>
+            <h3 class="graph-title">Hyra</h3>
             <span class="reset" style="display: none;">range: <span class="filter"></span></span>
             <a class="reset" href="javascript:rentChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
 
@@ -104,7 +109,7 @@
 
     <div class="row">
         <div id="monthly-queue-chart">
-            <h3>Kötid per månad</h3>
+            <h3 class="graph-title">Kötid per månad</h3>
             <span class="reset" style="display: none;">range: <span class="filter"></span></span>
             <a class="reset" href="javascript:monthyQueueChart.filterAll();volumeChart.filterAll();dc.redrawAll();"
                style="display: none;">reset</a>
@@ -130,7 +135,7 @@
             <div class="clearfix"></div>
         </div>
 
-        <h3>Senaste matchande förmedlingar</h3>
+        <h3 class="graph-title">Senaste matchande förmedlingar</h3>
         <table class="table table-hover dc-data-table">
         </table>
     </div>
@@ -145,6 +150,7 @@
     var rentChart = dc.barChart('#rent-chart');
     var roomsChart = dc.pieChart('#rooms-chart');
     var typeSelect = dc.selectMenu('#type-select');
+    var landlordSelect = dc.selectMenu('#landlord-select');
     var monthyQueueChart = dc.lineChart('#monthly-queue-chart');
     var volumeChart = dc.barChart('#monthly-volume-chart');
     var dataCount = dc.dataCount('.dc-data-count');
@@ -236,6 +242,18 @@
       });
       var typeGroup = avgQueueTimeReducer(typeDimension.group());
 
+      var knownLandlordUrls = {}
+      var normalizeLandLord = function(url){
+        if (!knownLandlordUrls.hasOwnProperty(url)){
+          var parser = document.createElement('a');
+          parser.href = url;
+          knownLandlordUrls[url] = parser.hostname.replace("www.", "")
+        }
+        return knownLandlordUrls[url]
+      }
+      var landlordDimension = ndx.dimension(function(d) {return d.landlord ? normalizeLandLord(d.landlord) : "Okänd"});
+      var landlordGroup = landlordDimension.group();
+
       var monthDomain = [new Date(1999, 0, 1), new Date()];
 
       newBuildingChart
@@ -267,8 +285,15 @@
         .group(typeGroup)
         .valueAccessor(function (d) {return d.value.count;})
         .multiple(true)
-        .numberVisible(10)
+        .numberVisible(6)
         .order(function(a, b) {return a.value.count > b.value.count ? -1 : b.value.count > a.value.count ? 1 : 0});
+
+      landlordSelect
+        .dimension(landlordDimension)
+        .group(landlordGroup)
+        .multiple(true)
+        .numberVisible(6)
+        .order(function(a, b) {return a.value > b.value ? -1 : b.value > a.value ? 1 : 0});
 
       areaSelect
         .dimension(municipalityDimension)
@@ -368,7 +393,7 @@
         .dimension(ndx)
         .group(all)
         .html({
-          some: '<h3>%filter-count</h3> selected out of <h3>%total-count</h3> records' +
+          some: '<h3 class="graph-title">%filter-count</h3> selected out of <h3 class="graph-title">%total-count</h3> records' +
               ' | <a href=\'javascript:dc.filterAll(); dc.renderAll();\'>Reset All</a>',
           all: 'All records selected. Please click on the graph to apply filters.'
         });
