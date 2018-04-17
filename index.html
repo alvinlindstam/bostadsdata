@@ -37,6 +37,13 @@
 
             <div class="clearfix"></div>
         </div>
+
+        <div id="rooms-chart">
+            <strong>Rum</strong>
+            <a class="reset" href="javascript:roomsChart.filterAll();dc.redrawAll();" style="display: none;">reset</a>
+
+            <div class="clearfix"></div>
+        </div>
         <div class="clearfix"></div>
     </div>
 
@@ -99,6 +106,7 @@
     var queueTimeChart = dc.barChart('#queue-time-chart');
     var rentChart = dc.barChart('#rent-chart');
     var municipalityChart = dc.pieChart('#municipality-chart');
+    var roomsChart = dc.pieChart('#rooms-chart');
     var monthyQueueChart = dc.lineChart('#monthly-queue-chart');
     var volumeChart = dc.barChart('#monthly-volume-chart');
     var dataCount = dc.dataCount('.dc-data-count');
@@ -171,7 +179,21 @@
         );
         var rentGroup = rentDimension.group();
 
+        var roomsDimension = ndx.dimension(function (d) {return d.rooms});
+        var roomsGroup = roomsDimension.group();
+
         var monthDomain = [new Date(1999, 0, 1), new Date()];
+
+        newBuildingChart
+          .width(PIE_CHART_SIZE)
+          .height(PIE_CHART_SIZE)
+          .radius(PIE_RADIUS)
+          .innerRadius(PIE_RADIUS/3)
+          .dimension(newBuildingDimension)
+          .group(newBuildingGroup)
+          .label(function (d) {
+            return d.key ? "Nyproduktion" : "Ej nyproduktion";
+          })
 
         municipalityChart
           .width(PIE_CHART_SIZE)
@@ -184,16 +206,16 @@
               return d.key;
           });
 
-        newBuildingChart
+        roomsChart
           .width(PIE_CHART_SIZE)
           .height(PIE_CHART_SIZE)
           .radius(PIE_RADIUS)
           .innerRadius(PIE_RADIUS/3)
-          .dimension(newBuildingDimension)
-          .group(newBuildingGroup)
+          .group(roomsGroup)
+          .dimension(roomsDimension)
           .label(function (d) {
-            return d.key ? "Nyproduktion" : "Ej nyproduktion";
-          })
+              return d.key;
+          });
 
         queueTimeChart
           .width(490)
