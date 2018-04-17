@@ -30,7 +30,10 @@ def to_number(string):
         try:
             return float(string)
         except ValueError:
-            return string
+            try:
+                return float(string.replace(",", "."))
+            except ValueError:
+                return string
 
 
 def parse(html, building_type):
