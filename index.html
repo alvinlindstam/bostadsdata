@@ -127,253 +127,255 @@
     var QUEUE_DAYS_CAP = 365*20
 
     d3.json('data/full_data.json', function (loaded_data) {
-        var dateFormat = d3.time.format('%Y-%m-%d');
-        var numberFormat = d3.format('.2f');
-        var municipalityGroups = [
-          ["Stockholm"],
-          ["Huddinge"],
-          ["Nacka", "Värmdö"], // öst
-          ["Botkyrka", "Salem"],
-          ["Järfälla", "Sollentuna", "Sigtuna", "Upplands väsby", "Upplands-bro", "Ekerö"],  // nordväst
-          ["Solna", "Sundbyberg"],
-          ["Haninge", "Tyresö", "Nynäshamn"], // sydöst
-          ["Lidingö"],
-          ["Uppsala", "Knivsta", "Norrtälje"],
-          ["Södertälje", "Nykvarn"],
-          ["Danderyd", "Täby", "Vaxholm", "Vallentuna", "Österåker"] // nordöst
-        ]
-        var municipalityGroupByMunicipality = {}
-        municipalityGroups.forEach(function(array) {
-          var key = array.join("/")
-          array.forEach(function(municipality) {
-            municipalityGroupByMunicipality[municipality] = key
-          })
+      var dateFormat = d3.time.format('%Y-%m-%d');
+      var numberFormat = d3.format('.2f');
+      var municipalityGroups = [
+        ["Stockholm"],
+        ["Huddinge"],
+        ["Nacka", "Värmdö"], // öst
+        ["Botkyrka", "Salem"],
+        ["Järfälla", "Sollentuna", "Sigtuna", "Upplands väsby", "Upplands-bro", "Ekerö"],  // nordväst
+        ["Solna", "Sundbyberg"],
+        ["Haninge", "Tyresö", "Nynäshamn"], // sydöst
+        ["Lidingö"],
+        ["Uppsala", "Knivsta", "Norrtälje"],
+        ["Södertälje", "Nykvarn"],
+        ["Danderyd", "Täby", "Vaxholm", "Vallentuna", "Österåker"] // nordöst
+      ]
+      var municipalityGroupByMunicipality = {}
+      municipalityGroups.forEach(function(array) {
+        var key = array.join("/")
+        array.forEach(function(municipality) {
+          municipalityGroupByMunicipality[municipality] = key
         })
-        var data = loaded_data.map(function (d) {
-            var obj =  {
-              id: d[0],
-              municipality: d[1],
-              municipal_area: d[2],
-              address: d[3],
-              rooms: d[4],
-              area: d[5],
-              rent: d[6],
-              floor: d[7],
-              queue_date: new Date(d[8]),
-              type: d[9],
-              is_new: d[10] === "nyproduktion",
-              ad_date: new Date(d[11]),
-              last_ad_date: new Date(d[12]),
-              move_date: new Date(d[13]),
-              landlord: d[14],
-              x: d[15],
-              y: d[16]
-            }
+      })
+      var data = loaded_data.map(function (d) {
+        var obj =  {
+          id: d[0],
+          municipality: d[1],
+          municipal_area: d[2],
+          address: d[3],
+          rooms: d[4],
+          area: d[5],
+          rent: d[6],
+          floor: d[7],
+          queue_date: new Date(d[8]),
+          type: d[9],
+          is_new: d[10] === "nyproduktion",
+          ad_date: new Date(d[11]),
+          last_ad_date: new Date(d[12]),
+          move_date: new Date(d[13]),
+          landlord: d[14],
+          x: d[15],
+          y: d[16]
+        }
 
-            obj.month = d3.time.month(obj.last_ad_date);
-            obj.queue_days = Math.round((obj.last_ad_date - obj.queue_date) / (24 * 60 * 60 * 1000))
-            return obj
+        obj.month = d3.time.month(obj.last_ad_date);
+        obj.queue_days = Math.round((obj.last_ad_date - obj.queue_date) / (24 * 60 * 60 * 1000))
+        return obj
+      });
+      data = data.filter(function (d){
+        if (!d.last_ad_date || d.last_ad_date < new Date("1999-01-01")){
+          //console.info("missing last_ad_date", d.id);
+          return false;
+        }
+        return true;
+      });
+
+      var ndx = crossfilter(data);
+      var all = ndx.groupAll();
+      var avgQueueTimeReducer = reductio().avg(function(d) { return d.queue_days; });
+
+      var monthDimension = ndx.dimension(function (d) {return d.month;});
+      var monthQueueDaysGroup = avgQueueTimeReducer(monthDimension.group());
+
+      var municipalityDimension = ndx.dimension(function (d) {return municipalityGroupByMunicipality[d.municipality]});
+      var municipalityGroup = avgQueueTimeReducer(municipalityDimension.group());
+
+      var subAreaDimension = ndx.dimension(function (d) {return d.municipality + " " + d.municipal_area})
+      var subAreaGroup = subArea
+
+      var newBuildingDimension = ndx.dimension(function (d) {return d.is_new});
+      var newBuildingGroup = newBuildingDimension.group();
+
+      var queueTimeDimension = ndx.dimension(function (d) {
+        var days = Math.min(d.queue_days, QUEUE_DAYS_CAP);
+        return days - (days % 30)}
+      );
+      var queueTimeGroup = queueTimeDimension.group();
+
+      var rentDimension = ndx.dimension(function (d) {
+        var rent = Math.min(d.rent, RENT_CAP)
+        return rent - (rent % 100)}
+      );
+      var rentGroup = rentDimension.group();
+
+      var roomsDimension = ndx.dimension(function (d) {return Math.floor(d.rooms)});
+      var roomsGroup = roomsDimension.group();
+
+      var typeDimension = ndx.dimension(function (d) {
+        var type = d.type;
+        if (!type || type == "Tillgänglighetsanpassad" || type == "Trygghetsboende") {
+          return "Övrigt"
+        }
+        return type
+      });
+      var typeGroup = avgQueueTimeReducer(typeDimension.group());
+
+      var monthDomain = [new Date(1999, 0, 1), new Date()];
+
+      newBuildingChart
+        .width(PIE_CHART_SIZE)
+        .height(PIE_CHART_SIZE)
+        .radius(PIE_RADIUS)
+        .innerRadius(PIE_RADIUS/3)
+        .dimension(newBuildingDimension)
+        .group(newBuildingGroup)
+        .label(function (d) {
+          return d.key ? "Nyproduktion" : "Ej nyproduktion";
+        })
+
+      municipalityChart
+        .dimension(municipalityDimension)
+        .group(municipalityGroup)
+        .width(PIE_CHART_SIZE)
+        .height(PIE_CHART_SIZE * 1.5)
+        .margins({top: 20, left: 10, right: 10, bottom: 20})
+        .valueAccessor(function (d) {return d.value.avg;})
+        .title(function (d) {
+            return d.key + ": " + Math.round(d.value.avg);
+        })
+        .elasticX(true)
+        .xAxis().ticks(4);
+
+      roomsChart
+        .width(PIE_CHART_SIZE)
+        .height(PIE_CHART_SIZE)
+        .radius(PIE_RADIUS)
+        .innerRadius(PIE_RADIUS/3)
+        .group(roomsGroup)
+        .dimension(roomsDimension)
+        .minAngleForLabel(0.2)
+        .slicesCap(4)
+        .label(function (d) {
+            return d.key;
         });
-        data = data.filter(function (d){
-          if (!d.last_ad_date || d.last_ad_date < new Date("1999-01-01")){
-            //console.info("missing last_ad_date", d.id);
-            return false;
+
+      typeChart
+        .dimension(typeDimension)
+        .group(typeGroup)
+        .width(PIE_CHART_SIZE)
+        .height(PIE_CHART_SIZE * 1.5)
+        .margins({top: 20, left: 10, right: 10, bottom: 20})
+        .valueAccessor(function (d) {return d.value.avg;})
+      .title(function (d) {
+          return d.key + ": " + Math.round(d.value.avg);
+      })
+      .elasticX(true)
+      .xAxis().ticks(4);
+
+      queueTimeChart
+        .width(490)
+        .height(180)
+        .margins({top: 10, right: 50, bottom: 30, left: 40})
+        .dimension(queueTimeDimension)
+        .group(queueTimeGroup)
+        .elasticY(true)
+        .centerBar(true)
+        .gap(1)
+        .round(dc.round.floor)
+        .alwaysUseRounding(true)
+        .x(d3.scale.linear().domain([0, 100000]))
+        .elasticX(true)
+        .renderHorizontalGridLines(true);
+      queueTimeChart.yAxis().ticks(5);
+
+      rentChart
+        .width(490)
+        .height(180)
+        .margins({top: 10, right: 50, bottom: 30, left: 40})
+        .dimension(rentDimension)
+        .group(rentGroup)
+        .elasticY(true)
+        .centerBar(true)
+        .gap(1)
+        .round(dc.round.floor)
+        .alwaysUseRounding(true)
+        .x(d3.scale.linear().domain([0, 100000]))
+        .elasticX(true)
+        .renderHorizontalGridLines(true);
+      rentChart.yAxis().ticks(5);
+
+      monthyQueueChart
+        .renderArea(true)
+        .width(990)
+        .height(200)
+        .margins({top: 30, right: 50, bottom: 25, left: 40})
+        .dimension(monthDimension)
+        .mouseZoomable(true)
+        .rangeChart(volumeChart)
+        .x(d3.time.scale().domain(monthDomain))
+        .round(d3.time.month.round)
+        .xUnits(d3.time.months)
+        .elasticY(true)
+        .renderHorizontalGridLines(true)
+        .legend(dc.legend().x(800).y(10).itemHeight(13).gap(5))
+        .brushOn(false)
+        .group(monthQueueDaysGroup, 'Genomsnittlig kötid')
+        .valueAccessor(function (d) {return d.value.avg;})
+        .title(function (d) {
+          var value = d.value.avg ? d.value.avg : d.value;
+          if (isNaN(value)) {
+              value = 0;
           }
-          return true;
+          return dateFormat(d.key) + '\n' + numberFormat(value);
         });
 
-        var ndx = crossfilter(data);
-        var all = ndx.groupAll();
-        var avgQueueTimeReducer = reductio().avg(function(d) { return d.queue_days; });
+      volumeChart.width(990)
+        .height(80)
+        .margins({top: 0, right: 50, bottom: 20, left: 40})
+        .dimension(monthDimension)
+        .group(monthQueueDaysGroup)
+        .valueAccessor(function (d) {return d.value.count;})
+        .centerBar(true)
+        .gap(1)
+        .x(d3.time.scale().domain(monthDomain))
+        .round(d3.time.month.round)
+        .alwaysUseRounding(true)
+        .elasticY(true)
+        .xUnits(d3.time.months);
+      volumeChart.yAxis().ticks(4);
 
-        var monthDimension = ndx.dimension(function (d) {return d.month;});
-        var monthQueueDaysGroup = avgQueueTimeReducer(monthDimension.group());
-
-        var municipalityDimension = ndx.dimension(function (d) {return municipalityGroupByMunicipality[d.municipality]});
-        var municipalityGroup = avgQueueTimeReducer(municipalityDimension.group());
-
-        var newBuildingDimension = ndx.dimension(function (d) {return d.is_new});
-        var newBuildingGroup = newBuildingDimension.group();
-
-        var queueTimeDimension = ndx.dimension(function (d) {
-          var days = Math.min(d.queue_days, QUEUE_DAYS_CAP);
-          return days - (days % 30)}
-        );
-        var queueTimeGroup = queueTimeDimension.group();
-
-        var rentDimension = ndx.dimension(function (d) {
-          var rent = Math.min(d.rent, RENT_CAP)
-          return rent - (rent % 100)}
-        );
-        var rentGroup = rentDimension.group();
-
-        var roomsDimension = ndx.dimension(function (d) {return Math.floor(d.rooms)});
-        var roomsGroup = roomsDimension.group();
-
-        var typeDimension = ndx.dimension(function (d) {
-          var type = d.type;
-          if (!type || type == "Tillgänglighetsanpassad" || type == "Trygghetsboende") {
-            return "Övrigt"
-          }
-          return type
+      dataCount
+        .dimension(ndx)
+        .group(all)
+        .html({
+          some: '<strong>%filter-count</strong> selected out of <strong>%total-count</strong> records' +
+              ' | <a href=\'javascript:dc.filterAll(); dc.renderAll();\'>Reset All</a>',
+          all: 'All records selected. Please click on the graph to apply filters.'
         });
-        var typeGroup = avgQueueTimeReducer(typeDimension.group());
 
-        var monthDomain = [new Date(1999, 0, 1), new Date()];
+      dataTable
+        .dimension(monthDimension)
+        .group(function (d) {return d.last_ad_date.getFullYear();})
+        .size(20)
+        .columns([
+            {label: "Länk", format: function(d){
+              return '<a href="https://bostad.stockholm.se/Lista/Details/?aid=' + d.id + '">' + (d.address || "Länk") + '</a>'
+            }},
+            {label: 'Kommun', format: function (d) {return d.municipality;}},
+            {label: "Anmälan senast", format: function(d) {return dateFormat(d.last_ad_date)}},
+            {label: "Ködagar", format: function(d) {return d.queue_days}},
+            {label: 'Rum', format: function (d) {return d.rooms;}},
+            {label: 'Hyra', format: function (d) {return d.rent;}},
+            {label: 'Typ', format: function (d) {return d.type;}},
+        ])
+        .sortBy(function (d) {
+            return d.last_ad_date;
+        })
+        .order(d3.descending);
 
-        newBuildingChart
-          .width(PIE_CHART_SIZE)
-          .height(PIE_CHART_SIZE)
-          .radius(PIE_RADIUS)
-          .innerRadius(PIE_RADIUS/3)
-          .dimension(newBuildingDimension)
-          .group(newBuildingGroup)
-          .label(function (d) {
-            return d.key ? "Nyproduktion" : "Ej nyproduktion";
-          })
-
-        municipalityChart
-          .dimension(municipalityDimension)
-          .group(municipalityGroup)
-          .width(PIE_CHART_SIZE)
-          .height(PIE_CHART_SIZE * 1.5)
-          .margins({top: 20, left: 10, right: 10, bottom: 20})
-          .valueAccessor(function (d) {return d.value.avg;})
-          .title(function (d) {
-              return d.key + ": " + Math.round(d.value.avg);
-          })
-          .elasticX(true)
-          .xAxis().ticks(4);
-
-        roomsChart
-          .width(PIE_CHART_SIZE)
-          .height(PIE_CHART_SIZE)
-          .radius(PIE_RADIUS)
-          .innerRadius(PIE_RADIUS/3)
-          .group(roomsGroup)
-          .dimension(roomsDimension)
-          .minAngleForLabel(0.2)
-          .slicesCap(4)
-          .label(function (d) {
-              return d.key;
-          });
-
-        typeChart
-          .dimension(typeDimension)
-          .group(typeGroup)
-          .width(PIE_CHART_SIZE)
-          .height(PIE_CHART_SIZE * 1.5)
-          .margins({top: 20, left: 10, right: 10, bottom: 20})
-          .valueAccessor(function (d) {return d.value.avg;})
-          .title(function (d) {
-              return d.key + ": " + Math.round(d.value.avg);
-          })
-          .elasticX(true)
-          .xAxis().ticks(4);
-
-
-        queueTimeChart
-          .width(490)
-          .height(180)
-          .margins({top: 10, right: 50, bottom: 30, left: 40})
-          .dimension(queueTimeDimension)
-          .group(queueTimeGroup)
-          .elasticY(true)
-          .centerBar(true)
-          .gap(1)
-          .round(dc.round.floor)
-          .alwaysUseRounding(true)
-          .x(d3.scale.linear().domain([0, 100000]))
-          .elasticX(true)
-          .renderHorizontalGridLines(true);
-        queueTimeChart.yAxis().ticks(5);
-
-        rentChart
-          .width(490)
-          .height(180)
-          .margins({top: 10, right: 50, bottom: 30, left: 40})
-          .dimension(rentDimension)
-          .group(rentGroup)
-          .elasticY(true)
-          .centerBar(true)
-          .gap(1)
-          .round(dc.round.floor)
-          .alwaysUseRounding(true)
-          .x(d3.scale.linear().domain([0, 100000]))
-          .elasticX(true)
-          .renderHorizontalGridLines(true);
-        rentChart.yAxis().ticks(5);
-
-        monthyQueueChart
-          .renderArea(true)
-          .width(990)
-          .height(200)
-          .margins({top: 30, right: 50, bottom: 25, left: 40})
-          .dimension(monthDimension)
-          .mouseZoomable(true)
-          .rangeChart(volumeChart)
-          .x(d3.time.scale().domain(monthDomain))
-          .round(d3.time.month.round)
-          .xUnits(d3.time.months)
-          .elasticY(true)
-          .renderHorizontalGridLines(true)
-          .legend(dc.legend().x(800).y(10).itemHeight(13).gap(5))
-          .brushOn(false)
-          .group(monthQueueDaysGroup, 'Genomsnittlig kötid')
-          .valueAccessor(function (d) {return d.value.avg;})
-          .title(function (d) {
-            var value = d.value.avg ? d.value.avg : d.value;
-            if (isNaN(value)) {
-                value = 0;
-            }
-            return dateFormat(d.key) + '\n' + numberFormat(value);
-          });
-
-        volumeChart.width(990)
-          .height(80)
-          .margins({top: 0, right: 50, bottom: 20, left: 40})
-          .dimension(monthDimension)
-          .group(monthQueueDaysGroup)
-          .valueAccessor(function (d) {return d.value.count;})
-          .centerBar(true)
-          .gap(1)
-          .x(d3.time.scale().domain(monthDomain))
-          .round(d3.time.month.round)
-          .alwaysUseRounding(true)
-          .elasticY(true)
-          .xUnits(d3.time.months);
-        volumeChart.yAxis().ticks(4);
-
-        dataCount
-          .dimension(ndx)
-          .group(all)
-          .html({
-            some: '<strong>%filter-count</strong> selected out of <strong>%total-count</strong> records' +
-                ' | <a href=\'javascript:dc.filterAll(); dc.renderAll();\'>Reset All</a>',
-            all: 'All records selected. Please click on the graph to apply filters.'
-          });
-
-        dataTable
-          .dimension(monthDimension)
-          .group(function (d) {return d.last_ad_date.getFullYear();})
-          .size(20)
-          .columns([
-              {label: "Länk", format: function(d){
-                return '<a href="https://bostad.stockholm.se/Lista/Details/?aid=' + d.id + '">' + (d.address || "Länk") + '</a>'
-              }},
-              {label: 'Kommun', format: function (d) {return d.municipality;}},
-              {label: "Anmälan senast", format: function(d) {return dateFormat(d.last_ad_date)}},
-              {label: "Ködagar", format: function(d) {return d.queue_days}},
-              {label: 'Rum', format: function (d) {return d.rooms;}},
-              {label: 'Hyra', format: function (d) {return d.rent;}},
-              {label: 'Typ', format: function (d) {return d.type;}},
-          ])
-          .sortBy(function (d) {
-              return d.last_ad_date;
-          })
-          .order(d3.descending);
-
-        dc.renderAll();
+      dc.renderAll();
     });
   </script>
 </body>
