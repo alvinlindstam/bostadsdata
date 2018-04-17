@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     def key(row):
         aid, *rest = row
-        return aid is None, aid, rest[:3]
+        return aid is None, aid, rest[:6], str(rest[6]), rest[7:]
     all_values.sort(key=key)
     with open("data/full_list.json", "w+") as full_list:
         write_prettier_json(all_values, file=full_list)
