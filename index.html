@@ -455,14 +455,17 @@
             {label: "Länk", format: function(d){
               return '<a href="https://bostad.stockholm.se/Lista/Details/?aid=' + d.id + '">' + (d.address || "Länk") + '</a>'
             }},
-            {label: "Anmälan senast", format: function(d) {return dateFormat(d.last_ad_date)}},
+            {label: "Anmälan", format: function(d) {return dateFormat(d.last_ad_date)}},
+            {label: "Ködatum", format: function(d) {return dateFormat(d.queue_date)}},
             {label: "Ködagar", format: function(d) {return d.queue_days}},
             {label: 'Rum', format: function (d) {return d.rooms;}},
             {label: 'Hyra', format: function (d) {return d.rent;}},
             {label: 'Typ', format: function (d) {return d.type;}},
             {label: 'Kommun', format: function (d) {return d.municipality;}},
             {label: 'Område', format: function (d) {return d.municipal_area;}},
-            {label: 'Hyresvärd', format: function (d) {return d.landlord;}},
+            {label: 'Hyresvärd', format: function (d) {
+                return d.landlord ? '<a href="' + d.landlord + '">' + normalizeLandLord(d.landlord) + '</a>' : "Okänd"
+            }},
         ])
         .sortBy(function (d) {
             return d.last_ad_date;
