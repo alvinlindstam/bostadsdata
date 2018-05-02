@@ -219,7 +219,10 @@
         }
 
         obj.month = d3.time.month(obj.last_ad_date);
+        obj.weekday = obj.last_ad_date.getDay();
+        obj.adDays = Math.round((obj.last_ad_date - obj.ad_date) / (24 * 60 * 60 * 1000))
         obj.queue_days = Math.round((obj.last_ad_date - obj.queue_date) / (24 * 60 * 60 * 1000))
+        obj.pricePerSqM = Math.round(obj.rent / obj.area)
         return obj
       });
       data = data.filter(function (d){
@@ -238,6 +241,12 @@
       var monthDimension = ndx.dimension(function (d) {return d.month;});
       var monthQueueDaysGroup = avgQueueTimeReducer(monthDimension.group());
 
+      weekdayDimension = ndx.dimension(function (d) {return d.weekday;});
+      weekdayQueueDaysGroup = avgQueueTimeReducer(weekdayDimension.group());
+
+      pricePerSqMDimension = ndx.dimension(function (d) {return d.pricePerSqM - (d.pricePerSqM % 1000);});
+      //pricePerSqMQueueDaysGroup = pricePerSqMDimension.group();
+
       var municipalityDimension = ndx.dimension(function (d) {return d.municipality});
       var municipalityGroup = municipalityDimension.group();
 
@@ -254,8 +263,11 @@
       var queueTimeGroup = queueTimeDimension.group();
 
       var rentDimension = ndx.dimension(function (d) {
-        var rent = Math.min(d.rent, RENT_CAP)
-        return rent - (rent % 100)}
+        if (isNaN(d.pricePerSqM)){
+          return 0
+        }
+        var rent = Math.min(d.pricePerSqM, RENT_CAP)
+        return rent - (rent % 2)}
       );
       var rentGroup = rentDimension.group();
 
